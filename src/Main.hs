@@ -39,7 +39,14 @@ setup window = do
   GL.clearColor $= Color4 0.9 0.2 0.3 1.0
   prog <- simpleShaderProgramBS vert frag
   vbo <- makeBuffer ArrayBuffer vertices
-  vao <- makeVAO $ return ()
+  vao <- makeVAO $ do
+    GL.currentProgram $= Just (program prog)
+    GL.bindBuffer ArrayBuffer $= Just vbo
+    let stride = fromIntegral $ sizeOf (undefined::GLfloat) * 3
+        vad = VertexArrayDescriptor 3 Float stride offset0
+    GL.vertexAttribPointer (GL.AttribLocation 0) $= (ToFloat, vad)
+    GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Enabled
+    --GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Disabled
   return (Resources (program prog) vbo vao)
 
 keyCallback :: GLFW.KeyCallback
@@ -62,17 +69,10 @@ gameLoop window resources = do
 
 draw (Resources prog vbo vao) =
   withVAO vao $ do
-   GL.currentProgram $= Just prog
-   GL.bindBuffer ArrayBuffer $= Just vbo
-   let
-     stride = fromIntegral $ sizeOf (undefined::GLfloat) * 3
-     vad = VertexArrayDescriptor 3 Float stride offset0
-   GL.vertexAttribPointer (GL.AttribLocation 0) $= (ToFloat, vad)
-   GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Enabled
-   GL.drawArrays GL.Triangles 0 3
-   GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Disabled
+   GL.drawArrays GL.Triangles 0 6
 
-vertices = [v1,v2,v3]
+vertices = [v1,v2,v3,
+            v2,v4,v5]
 
 v1 :: Vertex3 GLfloat
 v1 = GL.Vertex3 (-0.5) (-0.5) 0.0
@@ -85,6 +85,9 @@ v3 = GL.Vertex3 (-0.5) 0.5 0.0
 
 v4 :: Vertex3 GLfloat
 v4 = GL.Vertex3 0.5 (-0.5) 0.0
+
+v5 :: Vertex3 GLfloat
+v5 = GL.Vertex3 0.0 (-0.7) 0.0
 
 vert = "#version 330 core \
 \ layout (location = 0) in vec3 v_position; \
