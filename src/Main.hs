@@ -24,22 +24,22 @@ main = do
   GLFW.windowHint (GLFW.WindowHint'ContextVersionMinor 3)
   GLFW.windowHint (GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Core);
   GLFW.windowHint (GLFW.WindowHint'OpenGLForwardCompat True);
-  window <- GLFW.createWindow 300 300 "M O O S E" Nothing Nothing
+  window <- GLFW.createWindow 300 300 "MOOSE" Nothing Nothing
   case window of
    (Just w) -> do r <- setup w
                   gameLoop w r
    Nothing -> do putStrLn "Failed to create window."
                  
-data Resources = Resources GL.Program BufferObject VAO
+data Resources = Resources VAO
 
 setup :: Window -> IO Resources
 setup window = do
   GLFW.makeContextCurrent (Just window)
   GLFW.setKeyCallback window (Just keyCallback)
   GL.clearColor $= Color4 0.9 0.2 0.3 1.0
-  prog <- simpleShaderProgramBS vert frag
-  vbo <- makeBuffer ArrayBuffer vertices
   vao <- makeVAO $ do
+    prog <- simpleShaderProgramBS vert frag
+    vbo <- makeBuffer ArrayBuffer vertices
     GL.currentProgram $= Just (program prog)
     GL.bindBuffer ArrayBuffer $= Just vbo
     let stride = fromIntegral $ sizeOf (undefined::GLfloat) * 3
@@ -47,12 +47,12 @@ setup window = do
     GL.vertexAttribPointer (GL.AttribLocation 0) $= (ToFloat, vad)
     GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Enabled
     --GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Disabled
-  return (Resources (program prog) vbo vao)
+  return (Resources vao)
 
 keyCallback :: GLFW.KeyCallback
-keyCallback window key _ action _ =
-  when (key == GLFW.Key'Escape && action == GLFW.KeyState'Pressed) $
-    GLFW.setWindowShouldClose window True
+keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
+  GLFW.setWindowShouldClose window True
+keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 gameLoop :: Window -> Resources -> IO ()
 gameLoop window resources = do
@@ -67,7 +67,7 @@ gameLoop window resources = do
     GLFW.pollEvents
     gameLoop window resources
 
-draw (Resources prog vbo vao) =
+draw (Resources vao) =
   withVAO vao $ do
    GL.drawArrays GL.Triangles 0 6
 
