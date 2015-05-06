@@ -58,6 +58,7 @@ executable Moose
   
   -- Other library packages from which modules are imported.
   build-depends:       GLFW-b
+                     , GLUtil >= 0.8.2
                      , OpenGL >= 2.9.2.0
                      , base >=4.7 && <4.8
   
