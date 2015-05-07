@@ -30,6 +30,13 @@ main = do
                  
 data Resources = Resources VAO
 
+stride steps = fromIntegral (sizeOf (undefined::GLfloat) * steps)
+
+activateAttribute location floatCount = do
+  let descriptor = VertexArrayDescriptor (fromIntegral floatCount) Float (stride floatCount) offset0
+  GL.vertexAttribPointer (GL.AttribLocation 0) $= (ToFloat, descriptor)
+  GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Enabled
+
 setup :: Window -> IO Resources
 setup window = do
   GLFW.makeContextCurrent (Just window)
@@ -40,11 +47,7 @@ setup window = do
     vbo <- makeBuffer ArrayBuffer vertices
     GL.currentProgram $= Just (program prog)
     GL.bindBuffer ArrayBuffer $= Just vbo
-    let stride = fromIntegral $ sizeOf (undefined::GLfloat) * 3
-        vad = VertexArrayDescriptor 3 Float stride offset0
-    GL.vertexAttribPointer (GL.AttribLocation 0) $= (ToFloat, vad)
-    GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Enabled
-    --GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Disabled
+    activateAttribute 0 3
   return (Resources vao)
 
 keyCallback :: GLFW.KeyCallback
