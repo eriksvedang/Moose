@@ -11,9 +11,7 @@ import Graphics.GLUtil.ShaderProgram (ShaderProgram, program, simpleShaderProgra
 import Graphics.GLUtil.VertexArrayObjects (VAO, makeVAO, withVAO)
 import Foreign.Storable (sizeOf)
 
-onError e message = do
-  putStrLn "ERROR!"
-  putStrLn message
+onError e message = putStrLn $ "ERROR!" ++ message
 
 main :: IO ()
 main = do
@@ -69,7 +67,8 @@ gameLoop window resources = do
 
 draw (Resources vao) =
   withVAO vao $ do
-   GL.drawArrays GL.Triangles 0 6
+    --GL.getUniformLocation
+    GL.drawArrays GL.Triangles 0 6
 
 vertices = [v1,v2,v3,
             v2,v4,v5]
@@ -90,14 +89,14 @@ v5 :: Vertex3 GLfloat
 v5 = GL.Vertex3 0.0 (-0.7) 0.0
 
 vert = "#version 330 core \
-\ layout (location = 0) in vec3 v_position; \
-\ void main(void) { \
-\   gl_Position = vec4(v_position.x, v_position.y, v_position.z, 1.0); \
+\layout (location = 0) in vec3 v_position; \
+\void main(void) { \
+\ gl_Position = vec4(v_position.x, v_position.y, v_position.z, 1.0); \
 \}"
 
 frag = "#version 330 core \
-\ out vec4 color; \
-\ void main(void) { \
-\    color = vec4(0.9, 0.9, 1.0, 1.0f); \
+\out vec4 color; \
+\void main(void) { \
+\ color = vec4(0.9, 0.9, 1.0, 1.0f); \
 \}"
 
