@@ -69,11 +69,16 @@ gameLoop window resources = do
     GLFW.pollEvents
     gameLoop window resources
 
+pulse t low high =
+  let diff = high - low
+      half = diff / 2
+  in  low + half + half * realToFrac (sin t)
+
 draw (Resources vao prog) =
   withVAO vao $ do
     Just t <- GLFW.getTime
     let col :: Vertex3 GLfloat
-        col = GL.Vertex3 1.0 1.0 0.0
+        col = GL.Vertex3 0 (pulse t 0.5 0.75) 0.7
     setUniform prog "u_color" col
     GL.drawArrays GL.Triangles 0 6
 
