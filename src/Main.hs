@@ -88,10 +88,7 @@ rf1 (RenderPass _ prog _ offsets_vbo) = do
       off :: GLfloat
       off = -0.3
   setUniform prog "u_color" col
-  --setUniform prog "xoffset" off
-  --GL.drawArrays GL.Triangles 0 6
-  
-  glDrawArraysInstanced gl_TRIANGLE_STRIP 0 3 3
+  glDrawArraysInstanced gl_TRIANGLE_STRIP 0 4 3
 
 rf2 :: RenderPass -> IO ()
 rf2 (RenderPass _ prog _ offsets_vbo) = do
@@ -99,8 +96,7 @@ rf2 (RenderPass _ prog _ offsets_vbo) = do
   let col :: Vertex3 GLfloat
       col = GL.Vertex3 1.0 (pulse t 0.5 0.75 5.0) 0.7
   setUniform prog "u_color" col
-  --GL.drawArrays GL.Triangles 0 3
-  glDrawArraysInstanced gl_TRIANGLE_STRIP 0 3 3
+  glDrawArraysInstanced gl_TRIANGLE_STRIP 0 4 3
 
 keyCallback :: GLFW.KeyCallback
 keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
@@ -135,7 +131,7 @@ vertices2 = [v5,v3,v4,
              v2,v1,v5]
 
 offsets :: [GLfloat]
-offsets = [-0.8, 0.0, 0.9]
+offsets = [-0.9, 0.0, 1.0]
 
 v1 :: Vertex3 GLfloat
 v1 = GL.Vertex3 (-0.5) (-0.5) 0.0
@@ -162,7 +158,7 @@ vert = "#version 330 core \
 \out vec3 f_color; \
 \void main(void) { \
 \ f_color = u_color; \
-\ gl_Position = vec4(v_position.x + xoffset, v_position.y, v_position.z, 1.0); \
+\ gl_Position = vec4(v_position.x + xoffset, v_position.y + xoffset * 0.5, v_position.z, 1.0); \
 \}"
 
 frag = "#version 330 core \
