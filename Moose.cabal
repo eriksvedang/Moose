@@ -61,6 +61,7 @@ executable Moose
                      , GLUtil >= 0.8.2
                      , OpenGL >= 2.9.2.0
                      , base >=4.7 && <4.8
+                     , OpenGLRaw == 1.5.0.0
   
   -- Directories containing source files.
   hs-source-dirs:      src
