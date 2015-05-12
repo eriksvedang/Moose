@@ -29,7 +29,7 @@ main = do
                   gameLoop w r
    Nothing -> do putStrLn "Failed to create window."
                  
-data DrawCall = DrawCall VAO ShaderProgram (DrawCall -> IO ())
+data RenderPass = RenderPass VAO ShaderProgram (RenderPass -> IO ())
 
 stride steps = fromIntegral (sizeOf (undefined::GLfloat) * steps)
 
@@ -38,7 +38,7 @@ activateAttribute prog name floatCount = do
   enableAttrib prog name
   setAttrib prog name ToFloat descriptor
 
-setup :: Window -> IO [DrawCall]
+setup :: Window -> IO [RenderPass]
 setup window = do
   GLFW.makeContextCurrent (Just window)
   GLFW.setKeyCallback window (Just keyCallback)
@@ -54,19 +54,19 @@ setup window = do
     GL.bindBuffer ArrayBuffer $= Just vbo
     GL.currentProgram $= Just (program prog)
     activateAttribute prog "v_position" 3
-  return [(DrawCall vao prog rf1),
-          (DrawCall vao2 prog rf2)]
+  return [(RenderPass vao prog rf1),
+          (RenderPass vao2 prog rf2)]
 
-rf1 :: DrawCall -> IO ()
-rf1 (DrawCall _ prog _) = do
+rf1 :: RenderPass -> IO ()
+rf1 (RenderPass _ prog _) = do
   Just t <- GLFW.getTime
   let col :: Vertex3 GLfloat
       col = GL.Vertex3 0 (pulse t 0.5 0.75 5.0) 0.7
   setUniform prog "u_color" col
   GL.drawArrays GL.Triangles 0 6
 
-rf2 :: DrawCall -> IO ()
-rf2 (DrawCall _ prog _) = do
+rf2 :: RenderPass -> IO ()
+rf2 (RenderPass _ prog _) = do
   Just t <- GLFW.getTime
   let col :: Vertex3 GLfloat
       col = GL.Vertex3 1.0 (pulse t 0.5 0.75 5.0) 0.7
@@ -78,7 +78,7 @@ keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
   GLFW.setWindowShouldClose window True
 keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
-gameLoop :: Window -> [DrawCall] -> IO ()
+gameLoop :: Window -> [RenderPass] -> IO ()
 gameLoop window resources = do
   close <- GLFW.windowShouldClose window
   if close then do
@@ -96,7 +96,7 @@ pulse t low high freq =
       half = diff / 2
   in  low + half + half * realToFrac (sin (t * freq))
 
-draw r@(DrawCall vao prog renderFn) =
+draw r@(RenderPass vao prog renderFn) =
   withVAO vao (renderFn r)
 
 vertices = [v1,v2,v3,
