@@ -20,10 +20,13 @@ import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 
+import System.Remote.Monitoring
+
 onError e message = putStrLn $ "ERROR!" ++ message
 
 main :: IO ()
 main = do
+  forkServer "localhost" 1234
   success <- GLFW.init
   unless success $ putStrLn "Failed to init GLFW."
   GLFW.setErrorCallback (Just onError)
@@ -98,9 +101,15 @@ rf2 (RenderPass _ prog _ offsets_vbo) = do
   setUniform prog "u_color" col
   glDrawArraysInstanced gl_TRIANGLE_STRIP 0 4 3
 
+fib 0 = 1
+fib 1 = 1
+fib x = fib (x - 2) + fib (x - 1)
+
 keyCallback :: GLFW.KeyCallback
 keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
   GLFW.setWindowShouldClose window True
+keyCallback window GLFW.Key'Space _ GLFW.KeyState'Pressed _ = do
+  putStrLn $ "fib 40 = " ++ show (fib 40)
 keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 gameLoop :: Window -> [RenderPass] -> IO ()
