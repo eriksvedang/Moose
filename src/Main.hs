@@ -47,6 +47,7 @@ activateAttribute prog name floatCount = do
   enableAttrib prog name
   setAttrib prog name ToFloat descriptor
 
+activateInstanced :: BufferObject -> GLuint -> IO ()
 activateInstanced bufferData attributeLocation = do
   glEnableVertexAttribArray attributeLocation
   GL.bindBuffer ArrayBuffer $= Just bufferData
@@ -131,11 +132,14 @@ pulse t low high freq =
       half = diff / 2
   in  low + half + half * realToFrac (sin (t * freq))
 
+draw :: RenderPass -> IO ()
 draw r@(RenderPass vao prog renderFn offsets_vbo) =
   withVAO vao (renderFn r)
 
+vertices :: [Vertex3 GLfloat]
 vertices = [v3,v1,v2,v4]
 
+vertices2 :: [Vertex3 GLfloat]
 vertices2 = [v3,v1,v2]
 
 offsets :: [GLfloat]
