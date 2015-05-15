@@ -62,12 +62,11 @@ executable Moose
                      , OpenGL >= 2.9.2.0
                      , base >=4.7 && <4.8
                      , OpenGLRaw == 1.5.0.0
-                     , ekg == 0.4.0.5
   
   -- Directories containing source files.
   hs-source-dirs:      src
 
-  ghc-options:         -with-rtsopts=-T                       
+--  ghc-options:         -with-rtsopts=-T                       
   
   -- Base language which the package is written in.
   default-language:    Haskell2010
