@@ -1,6 +1,5 @@
 module Moose.Boilerplate ( GLFW.Window
                          , run
-                         , RenderPass(..)
                          , WindowSettings
                          , defaultWindow
                          ) where
@@ -22,14 +21,12 @@ import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 
-data RenderPass = RenderPass VAO ShaderProgram (RenderPass -> IO ()) BufferObject
-
 type WindowSettings = (String, Integer, Integer)
 
 defaultWindow = ("MOOSE", 640, 480)
 
-run :: WindowSettings -> (Window -> IO [RenderPass]) -> IO ()
-run (title, w, h) setup = do
+run :: WindowSettings -> (Window -> IO resource) -> (resource -> IO ()) -> IO ()
+run (title, w, h) setup draw = do
   success <- GLFW.init
   unless success $ putStrLn "Failed to init GLFW."
   GLFW.setErrorCallback (Just onError)
@@ -39,13 +36,13 @@ run (title, w, h) setup = do
   GLFW.windowHint (GLFW.WindowHint'OpenGLForwardCompat True);
   window <- GLFW.createWindow (fromInteger w) (fromInteger h) title Nothing Nothing
   case window of
-   (Just w) -> do r <- setup w
+   (Just w) -> do resource <- setup w
                   Just t <- GLFW.getTime
-                  gameLoop w r t 0
+                  gameLoop w draw resource t 0
    Nothing -> do putStrLn "Failed to create window."
 
-gameLoop :: Window -> [RenderPass] -> Double -> Integer -> IO ()
-gameLoop window resources t frameCount = do
+gameLoop :: Window -> (resource -> IO ()) -> resource -> Double -> Integer -> IO ()
+gameLoop window draw resources t frameCount = do
   Just newT <- GLFW.getTime
   let dt = newT - t
   when (frameCount `mod` 30 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
@@ -55,14 +52,10 @@ gameLoop window resources t frameCount = do
     GLFW.terminate
   else do
     GL.clear [GL.ColorBuffer]
-    mapM_ draw resources
+    draw resources
     GLFW.swapBuffers window
     GLFW.pollEvents
-    gameLoop window resources newT (frameCount + 1)
+    gameLoop window draw resources newT (frameCount + 1)
 
 onError e message = putStrLn $ "ERROR!" ++ message
-
-draw :: RenderPass -> IO ()
-draw r@(RenderPass vao prog renderFn offsets_vbo) =
-  withVAO vao (renderFn r)
   

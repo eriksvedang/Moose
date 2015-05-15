@@ -3,9 +3,12 @@ module Main where
 import Moose.Boilerplate
 
 main :: IO ()
-main = run defaultWindow setup
+main = run defaultWindow setup draw
 
-setup :: Window -> IO [RenderPass]
+setup :: Window -> IO ()
 setup win = do
-  return []
+  return ()
+
+draw :: () -> IO()
+draw _ = return ()
 

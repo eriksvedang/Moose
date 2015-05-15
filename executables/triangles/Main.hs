@@ -18,11 +18,20 @@ import Graphics.Rendering.OpenGL.Raw -- (glVertexAttribPointer)
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Moose.Boilerplate (run, RenderPass(..), WindowSettings)
+import Moose.Boilerplate (run, WindowSettings)
 import Moose.GlHelp (stride, activateAttribute, activateInstanced)
 
 main :: IO ()
-main = run ("TRIANGLES", 1900, 1200) setup
+main = run ("TRIANGLES", 1900, 1200) setup draw
+
+data RenderPass = RenderPass VAO ShaderProgram (RenderPass -> IO ()) BufferObject
+
+draw :: [RenderPass] -> IO ()
+draw passes = mapM_ drawPass passes
+
+drawPass :: RenderPass -> IO ()
+drawPass r@(RenderPass vao prog renderFn offsets_vbo) =
+  withVAO vao (renderFn r)
 
 setup :: Window -> IO [RenderPass]
 setup window = do
