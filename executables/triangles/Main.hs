@@ -15,50 +15,14 @@ import Graphics.Rendering.OpenGL.Raw.ARB.DrawInstanced (glDrawArraysInstanced)
 import Graphics.Rendering.OpenGL.Raw (gl_TRIANGLES, gl_LINE_STRIP, gl_TRIANGLE_STRIP)
 import Graphics.Rendering.OpenGL.Raw.ARB.InstancedArrays (glVertexAttribDivisor)
 import Graphics.Rendering.OpenGL.Raw -- (glVertexAttribPointer)
-
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-
-onError e message = putStrLn $ "ERROR!" ++ message
+import Moose.Boilerplate (run, RenderPass(..), WindowSettings)
+import Moose.GlHelp (stride, activateAttribute, activateInstanced)
 
 main :: IO ()
-main = do
-  success <- GLFW.init
-  unless success $ putStrLn "Failed to init GLFW."
-  GLFW.setErrorCallback (Just onError)
-  GLFW.windowHint (GLFW.WindowHint'ContextVersionMajor 3)
-  GLFW.windowHint (GLFW.WindowHint'ContextVersionMinor 3)
-  GLFW.windowHint (GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Core);
-  GLFW.windowHint (GLFW.WindowHint'OpenGLForwardCompat True);
-  window <- GLFW.createWindow 1900 1200 "MOOSE" Nothing Nothing
-  case window of
-   (Just w) -> do r <- setup w
-                  Just t <- GLFW.getTime
-                  gameLoop w r t 0
-   Nothing -> do putStrLn "Failed to create window."
-                 
-data RenderPass = RenderPass VAO ShaderProgram (RenderPass -> IO ()) BufferObject
-
-stride steps = fromIntegral (sizeOf (undefined::GLfloat) * steps)
-
-activateAttribute prog name floatCount = do
-  let descriptor = VertexArrayDescriptor (fromIntegral floatCount) Float (stride floatCount) offset0
-  enableAttrib prog name
-  setAttrib prog name ToFloat descriptor
-
-activateInstanced :: BufferObject -> GLuint -> IO ()
-activateInstanced bufferData attributeLocation = do
-  glEnableVertexAttribArray attributeLocation
-  GL.bindBuffer ArrayBuffer $= Just bufferData
-  glVertexAttribPointer
-    attributeLocation
-    1 -- components per vertex
-    gl_FLOAT
-    (fromBool False)
-    0 -- stride
-    nullPtr 
-  glVertexAttribDivisor attributeLocation 1
+main = run ("TRIANGLES", 1900, 1200) setup
 
 setup :: Window -> IO [RenderPass]
 setup window = do
@@ -111,30 +75,10 @@ keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
   GLFW.setWindowShouldClose window True
 keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
-gameLoop :: Window -> [RenderPass] -> Double -> Integer -> IO ()
-gameLoop window resources t frameCount = do
-  Just newT <- GLFW.getTime
-  let dt = newT - t
-  when (frameCount `mod` 30 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
-  close <- GLFW.windowShouldClose window
-  if close then do
-    GLFW.destroyWindow window
-    GLFW.terminate
-  else do
-    GL.clear [GL.ColorBuffer]
-    mapM_ draw resources
-    GLFW.swapBuffers window
-    GLFW.pollEvents
-    gameLoop window resources newT (frameCount + 1)
-
 pulse t low high freq =
   let diff = high - low
       half = diff / 2
   in  low + half + half * realToFrac (sin (t * freq))
-
-draw :: RenderPass -> IO ()
-draw r@(RenderPass vao prog renderFn offsets_vbo) =
-  withVAO vao (renderFn r)
 
 vertices :: [Vertex3 GLfloat]
 vertices = [v3,v1,v2,v4]
