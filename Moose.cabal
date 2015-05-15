@@ -38,6 +38,7 @@ executable Mini
                                              
 executable Triangles
   hs-source-dirs:      executables/triangles/
+  other-modules:       
   main-is:             Main.hs
   build-depends:       GLFW-b
                      , GLUtil >= 0.8.2
