@@ -43,16 +43,18 @@ setup window = do
   offsets_vbo <- makeBuffer ArrayBuffer offsets
   vao <- makeVAO $ do
     vbo <- makeBuffer ArrayBuffer vertices
-    GL.bindBuffer ArrayBuffer $= Just vbo
     GL.currentProgram $= Just (program prog)
+    GL.bindBuffer ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 3
-    activateInstanced offsets_vbo 1
+    GL.bindBuffer ArrayBuffer $= Just offsets_vbo
+    activateInstanced 1 1 1
   vao2 <- makeVAO $ do
     vbo <- makeBuffer ArrayBuffer vertices2
-    GL.bindBuffer ArrayBuffer $= Just vbo
     GL.currentProgram $= Just (program prog)
+    GL.bindBuffer ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 3
-    activateInstanced offsets_vbo 1
+    GL.bindBuffer ArrayBuffer $= Just offsets_vbo
+    activateInstanced 1 1 1
   return [(RenderPass vao  prog rf1 offsets_vbo)
          ,(RenderPass vao2 prog rf2 offsets_vbo)
          ]

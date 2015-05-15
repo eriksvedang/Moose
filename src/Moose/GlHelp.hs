@@ -26,17 +26,16 @@ activateAttribute prog name floatCount = do
   enableAttrib prog name
   setAttrib prog name ToFloat descriptor
 
-activateInstanced :: BufferObject -> GLuint -> IO ()
-activateInstanced bufferData attributeLocation = do
+activateInstanced :: GLuint -> GLint -> GLuint -> IO ()
+activateInstanced attributeLocation components divisor = do
   glEnableVertexAttribArray attributeLocation
-  GL.bindBuffer ArrayBuffer $= Just bufferData
   glVertexAttribPointer
     attributeLocation
-    1 -- components per vertex
+    components
     gl_FLOAT
     (fromBool False)
     0 -- stride
     nullPtr 
-  glVertexAttribDivisor attributeLocation 1
+  glVertexAttribDivisor attributeLocation divisor
 
 
