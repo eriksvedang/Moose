@@ -4,18 +4,19 @@ module Main where
 
 import Moose.Boilerplate (run)
 import Moose.GlHelp (activateAttribute)
+import Graphics.Rendering.OpenGL (($=))
+import Data.ByteString (ByteString)
+
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.Rendering.OpenGL as GL
-import Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.GLUtil.BufferObjects as BO
-import Graphics.GLUtil.VertexArrayObjects as VAOS
-import Data.ByteString (ByteString)
-import Graphics.GLUtil.ShaderProgram as SHP
+import qualified Graphics.GLUtil.VertexArrayObjects as VAOS
+import qualified Graphics.GLUtil.ShaderProgram as SHP
 
 main :: IO ()
 main = run ("Ships", 800, 600) setup draw
 
-setup :: GLFW.Window -> IO ()
+setup :: GLFW.Window -> IO (VAOS.VAO, SHP.ShaderProgram)
 setup window = do
   GLFW.makeContextCurrent (Just window)
   GLFW.setKeyCallback window (Just keyCallback)
@@ -26,15 +27,22 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 3
-  return ()
+  return (vao, prog)
 
 vertices :: [GL.GLfloat]
 vertices = [-0.9, -0.3
            , 0.9,  0.0
            ,-0.9,  0.3]
   
-draw :: () -> IO()
-draw _ = return ()
+draw :: (VAOS.VAO, SHP.ShaderProgram) -> IO()
+draw (vao, prog) = VAOS.withVAO vao $ do
+  Just t <- GLFW.getTime
+  let col :: GL.Vertex3 GL.GLfloat
+      col = GL.Vertex3 0 (pulse t 0.5 0.75 5.0) 0.7
+      off :: GL.GLfloat
+      off = -0.3
+  SHP.setUniform prog "u_color" col
+  GL.drawArrays GL.Triangles 0 3
 
 keyCallback :: GLFW.KeyCallback
 keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
@@ -59,3 +67,7 @@ frag = "#version 330 core \
 \ color = vec4(f_color, 1.0f); \
 \}"
 
+pulse t low high freq =
+  let diff = high - low
+      half = diff / 2
+  in  low + half + half * realToFrac (sin (t * freq))
