@@ -21,15 +21,15 @@ import qualified Linear.Matrix as LM
 import qualified Linear.Quaternion as LQ
 import qualified Linear.Projection as LP
 
-data State = State { vao :: VAOS.VAO
-                   , prog :: SHP.ShaderProgram
-                   , ship :: Ship
+data State = State { _vao :: VAOS.VAO
+                   , _prog :: SHP.ShaderProgram
+                   , _ship :: Ship
                    }
 
-data Ship = Ship { x :: Float
-                 , y :: Float
-                 , r :: Float
-                 , ar :: Float
+data Ship = Ship { _x :: Float
+                 , _y :: Float
+                 , _r :: Float
+                 , _ar :: Float
                  } deriving (Show)
 
 main :: IO ()
@@ -46,16 +46,12 @@ setup window = do
     activateAttribute prog "v_position" 2
   return $ State vao prog initialShip
 
-initialShip = Ship (-7) (-5) 0.4 0.001
+initialShip = Ship { _x = (-7), _y = (-5), _r = 0.4, _ar = 0.001 }
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-0.4, -0.3
            , 0.5,  0.0
            ,-0.4,  0.3]
-
-keyCallback :: GLFW.KeyCallback
-keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ = GLFW.setWindowShouldClose window True
-keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 mat4identity :: LM.M44 GLfloat
 mat4identity = LM.identity
@@ -76,23 +72,22 @@ draw (State vao prog (Ship x y r _)) = VAOS.withVAO vao $ do
   GL.drawArrays GL.Triangles 0 3
 
 tick :: State -> State
-tick s@(State _ _ (Ship x y r ar)) = s { ship = newShip } where
+tick s@(State _ _ (Ship x y r ar)) = s { _ship = newShip } where
   newR = r + ar
   newShip = Ship (x + 0.05 * cos(r)) (y + 0.05 * sin(r)) newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
-onKey window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ state = state
-onKey  window GLFW.Key'A _ GLFW.KeyState'Pressed _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
-  newShip = ship { ar = 0.02 }
-onKey  window GLFW.Key'D _ GLFW.KeyState'Pressed _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
-  newShip = ship { ar = -0.02 }
-onKey  window GLFW.Key'A _ GLFW.KeyState'Released _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
-  newShip = ship { ar = 0 }
-onKey  window GLFW.Key'D _ GLFW.KeyState'Released _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
-  newShip = ship { ar = 0 }
-onKey window _ _ _ _ s = s
-
---GLFW.setWindowShouldClose window True
+onKey  window key _ keyState _ state = state { _ship = newShip } where
+  ship = _ship state
+  newShip = case keyState of
+             GLFW.KeyState'Pressed -> case key of
+                                       GLFW.Key'A -> setRotationSpeed ship ( 0.02)
+                                       GLFW.Key'D -> setRotationSpeed ship (-0.02)
+                                       _ -> ship
+             GLFW.KeyState'Released -> setRotationSpeed ship 0
+             _ -> ship
+  
+setRotationSpeed ship newAngularRotation = ship { _ar = newAngularRotation }
 
 vert :: ByteString
 vert = "#version 330 core \
