@@ -23,7 +23,10 @@ import Moose.GlHelp (stride, activateAttribute, activateInstanced)
 import Data.ByteString (ByteString)
 
 main :: IO ()
-main = run ("TRIANGLES", 1900, 1200) setup draw
+main = run ("TRIANGLES", 1900, 1200) setup draw tick
+
+tick :: a -> a
+tick = id
 
 data RenderPass = RenderPass VAO ShaderProgram (RenderPass -> IO ()) BufferObject
 
