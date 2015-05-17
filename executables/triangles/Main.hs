@@ -23,7 +23,10 @@ import Moose.GlHelp (stride, activateAttribute, activateInstanced)
 import Data.ByteString (ByteString)
 
 main :: IO ()
-main = run ("TRIANGLES", 1900, 1200) setup draw tick
+main = run ("TRIANGLES", 1900, 1200) setup draw tick onKey
+
+onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> [RenderPass] -> [RenderPass]
+onKey _ _ _ _ _ s = s
 
 tick :: a -> a
 tick = id
@@ -39,8 +42,6 @@ drawPass r@(RenderPass vao prog renderFn offsets_vbo) =
 
 setup :: Window -> IO [RenderPass]
 setup window = do
-  GLFW.makeContextCurrent (Just window)
-  GLFW.setKeyCallback window (Just keyCallback)
   GL.clearColor $= Color4 0.9 0.95 0.95 1.0
   prog <- simpleShaderProgramBS vert frag
   offsets_vbo <- makeBuffer ArrayBuffer offsets
@@ -85,10 +86,10 @@ rf2 (RenderPass _ prog _ offsets_vbo) = do
 quadCount :: CInt
 quadCount = 10000
 
-keyCallback :: GLFW.KeyCallback
-keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
-  GLFW.setWindowShouldClose window True
-keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
+-- keyCallback :: GLFW.KeyCallback
+-- keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
+--   GLFW.setWindowShouldClose window True
+-- keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 pulse t low high freq =
   let diff = high - low
