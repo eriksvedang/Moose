@@ -66,7 +66,12 @@ color :: GL.Vertex3 GLfloat
 color = GL.Vertex3 1.0 0.8 0.2
              
 draw :: State -> IO ()
-draw (State vao prog window (Ship x y r _)) = VAOS.withVAO vao $ do
+draw state =
+  let vao = _vao state
+      prog = _prog state
+      window = _window state
+      (Ship x y r _) = _ship state
+  in VAOS.withVAO vao $ do
   SHP.setUniform prog "u_color" color
   (w, h) <- GLFW.getWindowSize window
   SHP.setUniform prog "u_transform" $ (viewMatrix (fromIntegral w) (fromIntegral h)) !*! (transform x y r)
@@ -79,7 +84,7 @@ tick state = state { _ship = newShip } where
   newShip = Ship (x + 5 * cos(r)) (y + 5 * sin(r)) newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
-onKey  window key _ keyState _ state = state { _ship = newShip } where
+onKey window key _ keyState _ state = state { _ship = newShip } where
   ship = _ship state
   newShip = case keyState of
              GLFW.KeyState'Pressed -> case key of
