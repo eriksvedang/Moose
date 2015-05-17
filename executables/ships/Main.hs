@@ -10,7 +10,6 @@ import Graphics.Rendering.OpenGL (GLfloat)
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Matrix ((!*!))
-
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.GLUtil.BufferObjects as BO
@@ -23,6 +22,7 @@ import qualified Linear.Projection as LP
 
 data State = State { _vao :: VAOS.VAO
                    , _prog :: SHP.ShaderProgram
+                   , _window :: GLFW.Window
                    , _ship :: Ship
                    }
 
@@ -44,14 +44,14 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-  return $ State vao prog initialShip
+  return $ State vao prog window initialShip
 
-initialShip = Ship { _x = (-7), _y = (-5), _r = 0.4, _ar = 0.001 }
+initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
 
 shipVerts :: [GL.GLfloat]
-shipVerts = [-0.4, -0.3
-           , 0.5,  0.0
-           ,-0.4,  0.3]
+shipVerts = [-40, -30
+            , 50,  00
+            ,-40,  30]
 
 mat4identity :: LM.M44 GLfloat
 mat4identity = LM.identity
@@ -59,22 +59,24 @@ mat4identity = LM.identity
 transform :: Float -> Float -> Float -> LM.M44 GLfloat
 transform x y rot = LM.mkTransformation (LQ.axisAngle (V3 0 0 1) (realToFrac rot)) (V3 (realToFrac x) (realToFrac y) 0.0)
 
-viewMatrix :: LM.M44 GLfloat
-viewMatrix = LP.ortho (-8) 8 (-6) 6 (-1) 1
+viewMatrix :: Float -> Float -> LM.M44 GLfloat
+viewMatrix w h = LP.ortho (realToFrac (-w/2)) (realToFrac (w/2)) (realToFrac (-h/2)) (realToFrac (h/2)) (-1) 1
 
 color :: GL.Vertex3 GLfloat
 color = GL.Vertex3 1.0 0.8 0.2
              
-draw :: State -> IO()
-draw (State vao prog (Ship x y r _)) = VAOS.withVAO vao $ do
+draw :: State -> IO ()
+draw (State vao prog window (Ship x y r _)) = VAOS.withVAO vao $ do
   SHP.setUniform prog "u_color" color
-  SHP.setUniform prog "u_transform" $ viewMatrix !*! (transform x y r)
+  (w, h) <- GLFW.getWindowSize window
+  SHP.setUniform prog "u_transform" $ (viewMatrix (fromIntegral w) (fromIntegral h)) !*! (transform x y r)
   GL.drawArrays GL.Triangles 0 3
 
 tick :: State -> State
-tick s@(State _ _ (Ship x y r ar)) = s { _ship = newShip } where
+tick state = state { _ship = newShip } where
+  (Ship x y r ar) = _ship state
   newR = r + ar
-  newShip = Ship (x + 0.05 * cos(r)) (y + 0.05 * sin(r)) newR ar
+  newShip = Ship (x + 5 * cos(r)) (y + 5 * sin(r)) newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
 onKey  window key _ keyState _ state = state { _ship = newShip } where
