@@ -6,6 +6,7 @@ import Moose.Boilerplate (run)
 import Moose.GlHelp (activateAttribute)
 import Graphics.Rendering.OpenGL (($=))
 import Data.ByteString (ByteString)
+import Graphics.Rendering.OpenGL (GLfloat)
 
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.Rendering.OpenGL as GL
@@ -13,8 +14,9 @@ import qualified Graphics.GLUtil.BufferObjects as BO
 import qualified Graphics.GLUtil.VertexArrayObjects as VAOS
 import qualified Graphics.GLUtil.ShaderProgram as SHP
 
+
 main :: IO ()
-main = run ("Ships", 800, 600) setup draw
+main = run ("Ships", 1600, 1200) setup draw
 
 setup :: GLFW.Window -> IO (VAOS.VAO, SHP.ShaderProgram)
 setup window = do
@@ -23,24 +25,22 @@ setup window = do
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
   vao <- VAOS.makeVAO $ do
-    vbo <- BO.makeBuffer GL.ArrayBuffer vertices
+    vbo <- BO.makeBuffer GL.ArrayBuffer shipVerts
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
-    activateAttribute prog "v_position" 3
+    activateAttribute prog "v_position" 2
   return (vao, prog)
 
-vertices :: [GL.GLfloat]
-vertices = [-0.9, -0.3
-           , 0.9,  0.0
-           ,-0.9,  0.3]
+shipVerts :: [GL.GLfloat]
+shipVerts = [-0.4, -0.3
+           , 0.5,  0.0
+           ,-0.4,  0.3]
   
 draw :: (VAOS.VAO, SHP.ShaderProgram) -> IO()
 draw (vao, prog) = VAOS.withVAO vao $ do
   Just t <- GLFW.getTime
-  let col :: GL.Vertex3 GL.GLfloat
-      col = GL.Vertex3 0 (pulse t 0.5 0.75 5.0) 0.7
-      off :: GL.GLfloat
-      off = -0.3
+  let col :: GL.Vertex3 GLfloat
+      col = GL.Vertex3 1.0 0.1 (pulse t 0.5 0.75 5.0)
   SHP.setUniform prog "u_color" col
   GL.drawArrays GL.Triangles 0 3
 
@@ -51,12 +51,12 @@ keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 vert :: ByteString
 vert = "#version 330 core \
-\layout (location = 0) in vec3 v_position; \
-\uniform vec3 u_color = vec3(1,1,0); \
+\layout (location = 0) in vec2 v_position; \
+\uniform vec3 u_color; \
 \out vec3 f_color; \
 \void main(void) { \
 \ f_color = u_color; \
-\ gl_Position = vec4(v_position.xyz, 1.0); \
+\ gl_Position = vec4(v_position.xy, 1.0, 1.0); \
 \}"
 
 frag :: ByteString
