@@ -25,7 +25,7 @@ import Data.IORef
 type WindowSettings = (String, Integer, Integer)
 type Draw s = (s -> IO ())
 type Tick s = (s -> s)
-type OnKey s = s -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> s
+type OnKey s = GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> s -> s 
 
 defaultWindow = ("MOOSE", 640, 480)
 
@@ -50,7 +50,7 @@ run (title, w, h) setup draw tick onKey = do
 
 keyboardInput :: IORef s -> OnKey s -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> IO ()
 keyboardInput stateRef onKey w k n t m = do
-  modifyIORef stateRef (\s -> onKey s w k n t m)
+  modifyIORef stateRef (onKey w k n t m)
 
 gameLoop :: Window -> Draw s -> Tick s -> IORef s -> Double -> Integer -> IO ()
 gameLoop window draw tick stateRef t frameCount = do

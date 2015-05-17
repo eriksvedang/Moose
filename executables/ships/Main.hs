@@ -76,17 +76,17 @@ tick s@(vao, prog, (Ship x y r ar)) = (vao, prog, newShip) where
   newR = r + ar
   newShip = Ship (x + 0.05 * cos(r)) (y + 0.05 * sin(r)) newR ar
 
-onKey :: State -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State
-onKey s window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ = s
-onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'A _ GLFW.KeyState'Pressed _ = (vao, prog, newShip) where
+onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
+onKey window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ state = state
+onKey  window GLFW.Key'A _ GLFW.KeyState'Pressed _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
   newShip = ship { ar = 0.02 }
-onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'D _ GLFW.KeyState'Pressed _ = (vao, prog, newShip) where
+onKey  window GLFW.Key'D _ GLFW.KeyState'Pressed _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
   newShip = ship { ar = -0.02 }
-onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'A _ GLFW.KeyState'Released _ = (vao, prog, newShip) where
+onKey  window GLFW.Key'A _ GLFW.KeyState'Released _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
   newShip = ship { ar = 0 }
-onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'D _ GLFW.KeyState'Released _ = (vao, prog, newShip) where
-  newShip = ship { ar = 0 }  
-onKey s window _ _ _ _ = s
+onKey  window GLFW.Key'D _ GLFW.KeyState'Released _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
+  newShip = ship { ar = 0 }
+onKey window _ _ _ _ s = s
 
 --GLFW.setWindowShouldClose window True
 
