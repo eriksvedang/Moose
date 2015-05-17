@@ -49,5 +49,14 @@ executable Triangles
   default-language:    Haskell2010
   --other-modules:       Shader
 
-
+executable Ships
+  hs-source-dirs:      executables/ships/
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <4.8
+                     , Moose
+                     , bytestring >= 0.10.4.0
+                     , GLFW-b
+                     , OpenGL >= 2.9.2.0
+                     , GLUtil >= 0.8.2
+  default-language:    Haskell2010
                        
