@@ -21,12 +21,16 @@ import qualified Linear.Matrix as LM
 import qualified Linear.Quaternion as LQ
 import qualified Linear.Projection as LP
 
-type State = (VAOS.VAO, SHP.ShaderProgram, Ship)
+data State = State { vao :: VAOS.VAO
+                   , prog :: SHP.ShaderProgram
+                   , ship :: Ship
+                   }
 
 data Ship = Ship { x :: Float
                  , y :: Float
                  , r :: Float
-                 , ar :: Float } deriving (Show)
+                 , ar :: Float
+                 } deriving (Show)
 
 main :: IO ()
 main = run ("Ships", 1600, 1200) setup draw tick onKey
@@ -40,7 +44,7 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-  return (vao, prog, initialShip)
+  return $ State vao prog initialShip
 
 initialShip = Ship (-7) (-5) 0.4 0.001
 
@@ -66,25 +70,25 @@ color :: GL.Vertex3 GLfloat
 color = GL.Vertex3 1.0 0.8 0.2
              
 draw :: State -> IO()
-draw (vao, prog, (Ship x y r _)) = VAOS.withVAO vao $ do
+draw (State vao prog (Ship x y r _)) = VAOS.withVAO vao $ do
   SHP.setUniform prog "u_color" color
   SHP.setUniform prog "u_transform" $ viewMatrix !*! (transform x y r)
   GL.drawArrays GL.Triangles 0 3
 
 tick :: State -> State
-tick s@(vao, prog, (Ship x y r ar)) = (vao, prog, newShip) where
+tick s@(State _ _ (Ship x y r ar)) = s { ship = newShip } where
   newR = r + ar
   newShip = Ship (x + 0.05 * cos(r)) (y + 0.05 * sin(r)) newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
 onKey window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ state = state
-onKey  window GLFW.Key'A _ GLFW.KeyState'Pressed _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
+onKey  window GLFW.Key'A _ GLFW.KeyState'Pressed _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
   newShip = ship { ar = 0.02 }
-onKey  window GLFW.Key'D _ GLFW.KeyState'Pressed _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
+onKey  window GLFW.Key'D _ GLFW.KeyState'Pressed _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
   newShip = ship { ar = -0.02 }
-onKey  window GLFW.Key'A _ GLFW.KeyState'Released _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
+onKey  window GLFW.Key'A _ GLFW.KeyState'Released _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
   newShip = ship { ar = 0 }
-onKey  window GLFW.Key'D _ GLFW.KeyState'Released _ s@(vao, prog, ship@(Ship _ _ r _)) = (vao, prog, newShip) where
+onKey  window GLFW.Key'D _ GLFW.KeyState'Released _ s@(State vao prog ship@(Ship _ _ r _)) = State vao prog newShip where
   newShip = ship { ar = 0 }
 onKey window _ _ _ _ s = s
 
