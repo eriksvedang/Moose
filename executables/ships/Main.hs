@@ -29,12 +29,10 @@ data Ship = Ship { x :: Float
                  , ar :: Float } deriving (Show)
 
 main :: IO ()
-main = run ("Ships", 1600, 1200) setup draw tick
+main = run ("Ships", 1600, 1200) setup draw tick onKey
 
 setup :: GLFW.Window -> IO State
 setup window = do
-  GLFW.makeContextCurrent (Just window)
-  GLFW.setKeyCallback window (Just keyCallback)
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
   vao <- VAOS.makeVAO $ do
@@ -50,6 +48,10 @@ shipVerts :: [GL.GLfloat]
 shipVerts = [-0.4, -0.3
            , 0.5,  0.0
            ,-0.4,  0.3]
+
+keyCallback :: GLFW.KeyCallback
+keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ = GLFW.setWindowShouldClose window True
+keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
 
 mat4identity :: LM.M44 GLfloat
 mat4identity = LM.identity
@@ -74,10 +76,11 @@ tick s@(vao, prog, (Ship x y r ar)) = (vao, prog, newShip) where
   newR = r + ar
   newShip = Ship (x + 0.01 * cos(r)) (y + 0.01 * sin(r)) newR ar
 
-keyCallback :: GLFW.KeyCallback
-keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
-  GLFW.setWindowShouldClose window True
-keyCallback window _ _ _ _ = putStrLn "Invalid keyboard input."
+onKey :: State -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State
+onKey s window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ = s
+onKey s window _ _ _ _ = s
+
+--GLFW.setWindowShouldClose window True
 
 vert :: ByteString
 vert = "#version 330 core \
