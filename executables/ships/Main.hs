@@ -25,7 +25,8 @@ type State = (VAOS.VAO, SHP.ShaderProgram, Ship)
 
 data Ship = Ship { x :: Float
                  , y :: Float
-                 , r :: Float } deriving (Show)
+                 , r :: Float
+                 , ar :: Float } deriving (Show)
 
 main :: IO ()
 main = run ("Ships", 1600, 1200) setup draw tick
@@ -43,7 +44,7 @@ setup window = do
     activateAttribute prog "v_position" 2
   return (vao, prog, initialShip)
 
-initialShip = Ship (-7) (-5) 0.4
+initialShip = Ship (-7) (-5) 0.4 0.001
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-0.4, -0.3
@@ -63,14 +64,15 @@ color :: GL.Vertex3 GLfloat
 color = GL.Vertex3 1.0 0.8 0.2
              
 draw :: State -> IO()
-draw (vao, prog, (Ship x y r)) = VAOS.withVAO vao $ do
+draw (vao, prog, (Ship x y r _)) = VAOS.withVAO vao $ do
   SHP.setUniform prog "u_color" color
   SHP.setUniform prog "u_transform" $ viewMatrix !*! (transform x y r)
   GL.drawArrays GL.Triangles 0 3
 
 tick :: State -> State
-tick s@(vao, prog, (Ship x y r)) = (vao, prog, newShip) where
-           newShip = Ship (x + 0.01 * cos(r)) (y + 0.01 * sin(r)) r
+tick s@(vao, prog, (Ship x y r ar)) = (vao, prog, newShip) where
+  newR = r + ar
+  newShip = Ship (x + 0.01 * cos(r)) (y + 0.01 * sin(r)) newR ar
 
 keyCallback :: GLFW.KeyCallback
 keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =
