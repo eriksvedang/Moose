@@ -74,10 +74,18 @@ draw (vao, prog, (Ship x y r _)) = VAOS.withVAO vao $ do
 tick :: State -> State
 tick s@(vao, prog, (Ship x y r ar)) = (vao, prog, newShip) where
   newR = r + ar
-  newShip = Ship (x + 0.01 * cos(r)) (y + 0.01 * sin(r)) newR ar
+  newShip = Ship (x + 0.05 * cos(r)) (y + 0.05 * sin(r)) newR ar
 
 onKey :: State -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State
 onKey s window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ = s
+onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'A _ GLFW.KeyState'Pressed _ = (vao, prog, newShip) where
+  newShip = ship { ar = 0.02 }
+onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'D _ GLFW.KeyState'Pressed _ = (vao, prog, newShip) where
+  newShip = ship { ar = -0.02 }
+onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'A _ GLFW.KeyState'Released _ = (vao, prog, newShip) where
+  newShip = ship { ar = 0 }
+onKey s@(vao, prog, ship@(Ship _ _ r _)) window GLFW.Key'D _ GLFW.KeyState'Released _ = (vao, prog, newShip) where
+  newShip = ship { ar = 0 }  
 onKey s window _ _ _ _ = s
 
 --GLFW.setWindowShouldClose window True

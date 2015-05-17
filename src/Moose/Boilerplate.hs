@@ -20,6 +20,7 @@ import Graphics.Rendering.OpenGL.Raw -- (glVertexAttribPointer)
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Data.IORef
 
 type WindowSettings = (String, Integer, Integer)
 type Draw s = (s -> IO ())
@@ -41,18 +42,18 @@ run (title, w, h) setup draw tick onKey = do
   case window of
    (Just win) -> do GLFW.makeContextCurrent (Just win)
                     state <- setup win
-                    GLFW.setKeyCallback win (Just (keyboardInput state onKey))
+                    stateRef <- newIORef state
+                    GLFW.setKeyCallback win (Just (keyboardInput stateRef onKey))
                     Just t <- GLFW.getTime
-                    gameLoop win draw tick state t 0
+                    gameLoop win draw tick stateRef t 0
    Nothing -> do putStrLn "Failed to create window."
 
-keyboardInput :: s -> OnKey s -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> IO ()
-keyboardInput s onKey w k n t m = do
-  let newState = onKey s w k n t m
-  return ()
+keyboardInput :: IORef s -> OnKey s -> GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> IO ()
+keyboardInput stateRef onKey w k n t m = do
+  modifyIORef stateRef (\s -> onKey s w k n t m)
 
-gameLoop :: Window -> Draw s -> Tick s -> s -> Double -> Integer -> IO ()
-gameLoop window draw tick state t frameCount = do
+gameLoop :: Window -> Draw s -> Tick s -> IORef s -> Double -> Integer -> IO ()
+gameLoop window draw tick stateRef t frameCount = do
   Just newT <- GLFW.getTime
   let dt = newT - t
   when (frameCount `mod` 30 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
@@ -62,11 +63,12 @@ gameLoop window draw tick state t frameCount = do
     GLFW.terminate
   else do
     GL.clear [GL.ColorBuffer]
+    state <- readIORef stateRef
     draw state
     GLFW.swapBuffers window
     GLFW.pollEvents
-    let newState = tick state
-    gameLoop window draw tick newState newT (frameCount + 1)
+    modifyIORef stateRef tick
+    gameLoop window draw tick stateRef newT (frameCount + 1)
 
 onError e message = putStrLn $ "ERROR!" ++ message
   
