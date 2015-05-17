@@ -21,10 +21,16 @@ import qualified Linear.Matrix as LM
 import qualified Linear.Quaternion as LQ
 import qualified Linear.Projection as LP
 
-main :: IO ()
-main = run ("Ships", 1600, 1200) setup draw
+type State = (VAOS.VAO, SHP.ShaderProgram, Ship)
 
-setup :: GLFW.Window -> IO (VAOS.VAO, SHP.ShaderProgram)
+data Ship = Ship { x :: Float
+                 , y :: Float
+                 , r :: Float } deriving (Show)
+
+main :: IO ()
+main = run ("Ships", 1600, 1200) setup draw tick
+
+setup :: GLFW.Window -> IO State
 setup window = do
   GLFW.makeContextCurrent (Just window)
   GLFW.setKeyCallback window (Just keyCallback)
@@ -35,7 +41,9 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-  return (vao, prog)
+  return (vao, prog, initialShip)
+
+initialShip = Ship (-7) (-5) 0.4
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-0.4, -0.3
@@ -45,19 +53,24 @@ shipVerts = [-0.4, -0.3
 mat4identity :: LM.M44 GLfloat
 mat4identity = LM.identity
 
-transform :: GLfloat -> LM.M44 GLfloat
-transform rot = LM.mkTransformation (LQ.axisAngle (V3 0 0 1) rot) (V3 (-0.3) 0.0 0.0)
-            
-draw :: (VAOS.VAO, SHP.ShaderProgram) -> IO()
-draw (vao, prog) = VAOS.withVAO vao $ do
-  Just t <- GLFW.getTime
-  let col :: GL.Vertex3 GLfloat
-      col = GL.Vertex3 1.0 0.1 (pulse t 0.5 0.75 5.0)
-  SHP.setUniform prog "u_color" col
-  let viewMatrix :: LM.M44 GLfloat
-      viewMatrix = LP.ortho (-8) 8 (-6) 6 (-1) 1
-  SHP.setUniform prog "u_transform" $ viewMatrix !*! (transform (realToFrac t))
+transform :: Float -> Float -> Float -> LM.M44 GLfloat
+transform x y rot = LM.mkTransformation (LQ.axisAngle (V3 0 0 1) (realToFrac rot)) (V3 (realToFrac x) (realToFrac y) 0.0)
+
+viewMatrix :: LM.M44 GLfloat
+viewMatrix = LP.ortho (-8) 8 (-6) 6 (-1) 1
+
+color :: GL.Vertex3 GLfloat
+color = GL.Vertex3 1.0 0.8 0.2
+             
+draw :: State -> IO()
+draw (vao, prog, (Ship x y r)) = VAOS.withVAO vao $ do
+  SHP.setUniform prog "u_color" color
+  SHP.setUniform prog "u_transform" $ viewMatrix !*! (transform x y r)
   GL.drawArrays GL.Triangles 0 3
+
+tick :: State -> State
+tick s@(vao, prog, (Ship x y r)) = (vao, prog, newShip) where
+           newShip = Ship (x + 0.01 * cos(r)) (y + 0.01 * sin(r)) r
 
 keyCallback :: GLFW.KeyCallback
 keyCallback window GLFW.Key'Escape _ GLFW.KeyState'Pressed _ =

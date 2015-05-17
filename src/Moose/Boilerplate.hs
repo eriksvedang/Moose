@@ -25,8 +25,8 @@ type WindowSettings = (String, Integer, Integer)
 
 defaultWindow = ("MOOSE", 640, 480)
 
-run :: WindowSettings -> (Window -> IO resource) -> (resource -> IO ()) -> IO ()
-run (title, w, h) setup draw = do
+run :: WindowSettings -> (Window -> IO resource) -> (resource -> IO ()) -> (resource -> resource) -> IO ()
+run (title, w, h) setup draw tick = do
   success <- GLFW.init
   unless success $ putStrLn "Failed to init GLFW."
   GLFW.setErrorCallback (Just onError)
@@ -38,11 +38,11 @@ run (title, w, h) setup draw = do
   case window of
    (Just w) -> do resource <- setup w
                   Just t <- GLFW.getTime
-                  gameLoop w draw resource t 0
+                  gameLoop w draw tick resource t 0
    Nothing -> do putStrLn "Failed to create window."
 
-gameLoop :: Window -> (resource -> IO ()) -> resource -> Double -> Integer -> IO ()
-gameLoop window draw resources t frameCount = do
+gameLoop :: Window -> (resource -> IO ()) -> (resource -> resource) -> resource -> Double -> Integer -> IO ()
+gameLoop window draw tick resources t frameCount = do
   Just newT <- GLFW.getTime
   let dt = newT - t
   when (frameCount `mod` 30 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
@@ -55,7 +55,8 @@ gameLoop window draw resources t frameCount = do
     draw resources
     GLFW.swapBuffers window
     GLFW.pollEvents
-    gameLoop window draw resources newT (frameCount + 1)
+    let newResources = tick resources
+    gameLoop window draw tick newResources newT (frameCount + 1)
 
 onError e message = putStrLn $ "ERROR!" ++ message
   
