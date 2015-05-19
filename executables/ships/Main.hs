@@ -48,19 +48,21 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-    shipPositionsBuffer <- BO.makeBuffer GL.ArrayBuffer shipPositions
-    GL.bindBuffer GL.ArrayBuffer $= Just shipPositionsBuffer
-    activateInstanced 1 2 1 -- loc, components, divisor
+    shipsBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
+    GL.bindBuffer GL.ArrayBuffer $= Just shipsBuffer
+    activateInstanced 1 2 5 0 1 -- loc, components, stride, start, divisor
+    activateInstanced 2 3 5 2 1
   return $ State vao prog window initialShip
 
 initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
 
-shipPositions :: [GLfloat]
-shipPositions = [0, 0,
-                 150, -200,
-                 -350, 100,
-                 -500, 60,
-                 100, 0]
+shipsData :: [GLfloat] -- x, y, r, g, b,
+shipsData =     [0, 0,          1, 0, 0,
+                 150, -200,     0, 1, 0.3,
+                 150, -100,     0, 1, 0.4,
+                 150, 100,      0, 1, 0.5,
+                 150, 200,      0, 1, 0.6
+                ]
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-40, -30
@@ -86,10 +88,8 @@ draw state =
       window = _window state
       (Ship x y r _) = _ship state
   in VAOS.withVAO vao $ do
-  SHP.setUniform prog "u_color" color
   (w, h) <- GLFW.getWindowSize window
   SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h)) -- !*! (transform x y r)
-  --GL.drawArrays GL.Triangles 0 3
   glDrawArraysInstanced gl_TRIANGLES 0 3 5
 
 tick :: State -> State
@@ -115,11 +115,11 @@ vert :: ByteString
 vert = "#version 330 core \
 \layout (location = 0) in vec2 v_position; \
 \layout (location = 1) in vec2 v_worldPos; \
-\uniform vec3 u_color; \
+\layout (location = 2) in vec3 v_color; \
 \uniform mat4 u_view; \
 \out vec3 f_color; \
 \void main(void) { \
-\ f_color = u_color; \
+\ f_color = v_color; \
 \ gl_Position = u_view * (vec4(v_position.xy, 1.0, 1.0) + vec4(v_worldPos.xy, 0.0, 0.0)); \
 \}"
 

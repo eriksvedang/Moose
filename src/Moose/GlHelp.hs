@@ -18,24 +18,27 @@ import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Storable (sizeOf)
 
-stride :: Num b => Int -> b
-stride steps = fromIntegral (sizeOf (undefined::GLfloat) * steps)
+getStride :: Num b => Int -> b
+getStride steps = fromIntegral (sizeOf (undefined::GLfloat) * steps)
 
 activateAttribute prog name floatCount = do
-  let descriptor = VertexArrayDescriptor (fromIntegral floatCount) Float (stride floatCount) offset0
+  let descriptor = VertexArrayDescriptor (fromIntegral floatCount) Float (getStride floatCount) offset0
   enableAttrib prog name
   setAttrib prog name ToFloat descriptor
 
-activateInstanced :: GLuint -> GLint -> GLuint -> IO ()
-activateInstanced attributeLocation components divisor = do
+-- | stride is the full size of the data for one "entity"
+-- | divisor is usually 1 and is how many rendered objects should share one chunk of data
+activateInstanced :: GLuint -> GLint -> Int -> Int -> GLuint -> IO ()
+activateInstanced attributeLocation components strideSteps startPointer divisor = do
   glEnableVertexAttribArray attributeLocation
   glVertexAttribPointer
     attributeLocation
     components
     gl_FLOAT
     (fromBool False)
-    0 -- stride
-    nullPtr 
+    (getStride strideSteps)
+    (plusPtr nullPtr (sizeOf (undefined::GLfloat) * startPointer))
   glVertexAttribDivisor attributeLocation divisor
 
 
+--nullPtr
