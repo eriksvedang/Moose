@@ -3,7 +3,7 @@
 module Main where
 
 import Moose.Boilerplate (run)
-import Moose.GlHelp (activateAttribute)
+import Moose.GlHelp (activateAttribute, activateInstanced)
 import Graphics.Rendering.OpenGL (($=))
 import Data.ByteString (ByteString)
 import Graphics.Rendering.OpenGL (GLfloat)
@@ -19,6 +19,10 @@ import qualified Graphics.GLUtil.Linear as UL
 import qualified Linear.Matrix as LM
 import qualified Linear.Quaternion as LQ
 import qualified Linear.Projection as LP
+
+import Graphics.Rendering.OpenGL.Raw.ARB.DrawInstanced (glDrawArraysInstanced)
+import Graphics.Rendering.OpenGL.Raw (gl_TRIANGLES, gl_LINE_STRIP, gl_TRIANGLE_STRIP)
+import Graphics.Rendering.OpenGL.Raw.ARB.InstancedArrays (glVertexAttribDivisor)
 
 data State = State { _vao :: VAOS.VAO
                    , _prog :: SHP.ShaderProgram
@@ -44,9 +48,19 @@ setup window = do
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
+    shipPositionsBuffer <- BO.makeBuffer GL.ArrayBuffer shipPositions
+    GL.bindBuffer GL.ArrayBuffer $= Just shipPositionsBuffer
+    activateInstanced 1 2 1 -- loc, components, divisor
   return $ State vao prog window initialShip
 
 initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
+
+shipPositions :: [GLfloat]
+shipPositions = [0, 0,
+                 150, -200,
+                 -350, 100,
+                 -500, 60,
+                 100, 0]
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-40, -30
@@ -74,8 +88,9 @@ draw state =
   in VAOS.withVAO vao $ do
   SHP.setUniform prog "u_color" color
   (w, h) <- GLFW.getWindowSize window
-  SHP.setUniform prog "u_transform" $ (viewMatrix (fromIntegral w) (fromIntegral h)) !*! (transform x y r)
-  GL.drawArrays GL.Triangles 0 3
+  SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h)) -- !*! (transform x y r)
+  --GL.drawArrays GL.Triangles 0 3
+  glDrawArraysInstanced gl_TRIANGLES 0 3 5
 
 tick :: State -> State
 tick state = state { _ship = newShip } where
@@ -88,8 +103,8 @@ onKey window key _ keyState _ state = state { _ship = newShip } where
   ship = _ship state
   newShip = case keyState of
              GLFW.KeyState'Pressed -> case key of
-                                       GLFW.Key'A -> setRotationSpeed ship ( 0.02)
-                                       GLFW.Key'D -> setRotationSpeed ship (-0.02)
+                                       GLFW.Key'A -> setRotationSpeed ship ( 0.06)
+                                       GLFW.Key'D -> setRotationSpeed ship (-0.06)
                                        _ -> ship
              GLFW.KeyState'Released -> setRotationSpeed ship 0
              _ -> ship
@@ -99,12 +114,13 @@ setRotationSpeed ship newAngularRotation = ship { _ar = newAngularRotation }
 vert :: ByteString
 vert = "#version 330 core \
 \layout (location = 0) in vec2 v_position; \
+\layout (location = 1) in vec2 v_worldPos; \
 \uniform vec3 u_color; \
-\uniform mat4 u_transform; \
+\uniform mat4 u_view; \
 \out vec3 f_color; \
 \void main(void) { \
 \ f_color = u_color; \
-\ gl_Position = u_transform * vec4(v_position.xy, 1.0, 1.0); \
+\ gl_Position = u_view * (vec4(v_position.xy, 1.0, 1.0) + vec4(v_worldPos.xy, 0.0, 0.0)); \
 \}"
 
 frag :: ByteString

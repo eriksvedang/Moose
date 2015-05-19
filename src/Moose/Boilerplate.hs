@@ -56,7 +56,7 @@ gameLoop :: Window -> Draw s -> Tick s -> IORef s -> Double -> Integer -> IO ()
 gameLoop window draw tick stateRef t frameCount = do
   Just newT <- GLFW.getTime
   let dt = newT - t
-  when (frameCount `mod` 5 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
+  when (frameCount `mod` 30 == 0) (putStrLn $ "FPS: " ++ show (1.0 / dt))
   close <- GLFW.windowShouldClose window
   if close then do
     GLFW.destroyWindow window
