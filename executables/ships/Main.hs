@@ -50,18 +50,19 @@ setup window = do
     activateAttribute prog "v_position" 2
     shipsBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
     GL.bindBuffer GL.ArrayBuffer $= Just shipsBuffer
-    activateInstanced 1 2 5 0 1 -- loc, components, stride, start, divisor
-    activateInstanced 2 3 5 2 1
+    activateInstanced 1 2 6 0 1 -- loc, components, stride, start, divisor
+    activateInstanced 2 3 6 2 1
+    activateInstanced 3 1 6 5 1
   return $ State vao prog window initialShip
 
 initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
 
-shipsData :: [GLfloat] -- x, y, r, g, b,
-shipsData =     [0, 0,          1, 0, 0,
-                 150, -200,     0, 1, 0.3,
-                 150, -100,     0, 1, 0.4,
-                 150, 100,      0, 1, 0.5,
-                 150, 200,      0, 1, 0.6
+shipsData :: [GLfloat] -- x, y, r, g, b, rot
+shipsData =     [0, 0,          1, 0, 0,      0,
+                 150,  200,     0, 1, 0.3,    0.2,
+                 150,  100,     0, 1, 0.4,    0.4,
+                 150, -100,      0, 1, 0.5,   -0.5,
+                 150, -300,      0, 1, 0.6,    3.14
                 ]
 
 shipVerts :: [GL.GLfloat]
@@ -116,11 +117,16 @@ vert = "#version 330 core \
 \layout (location = 0) in vec2 v_position; \
 \layout (location = 1) in vec2 v_worldPos; \
 \layout (location = 2) in vec3 v_color; \
+\layout (location = 3) in float v_rotation; \
 \uniform mat4 u_view; \
 \out vec3 f_color; \
 \void main(void) { \
 \ f_color = v_color; \
-\ gl_Position = u_view * (vec4(v_position.xy, 1.0, 1.0) + vec4(v_worldPos.xy, 0.0, 0.0)); \
+\ mat4 rotationMatrix = mat4( cos( v_rotation ), -sin( v_rotation ), 0.0, 0.0, \
+\                             sin( v_rotation ),  cos( v_rotation ), 0.0, 0.0, \
+\                                           0.0,                0.0, 1.0, 0.0, \
+\                                           0.0,                0.0, 0.0, 1.0 ); \
+\ gl_Position = u_view * (rotationMatrix * (vec4(v_position.xy, 1.0, 1.0)) + vec4(v_worldPos.xy, 0.0, 0.0)); \
 \}"
 
 frag :: ByteString
