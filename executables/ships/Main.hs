@@ -24,10 +24,13 @@ import Graphics.Rendering.OpenGL.Raw.ARB.DrawInstanced (glDrawArraysInstanced)
 import Graphics.Rendering.OpenGL.Raw (gl_TRIANGLES, gl_LINE_STRIP, gl_TRIANGLE_STRIP)
 import Graphics.Rendering.OpenGL.Raw.ARB.InstancedArrays (glVertexAttribDivisor)
 
+import qualified Data.Vector.Storable as SV
+
 data State = State { _vao :: VAOS.VAO
                    , _prog :: SHP.ShaderProgram
                    , _window :: GLFW.Window
                    , _ship :: Ship
+                   , _shipsBuffer :: GL.BufferObject
                    }
 
 data Ship = Ship { _x :: Float
@@ -43,19 +46,28 @@ setup :: GLFW.Window -> IO State
 setup window = do
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
+  shipsBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
   vao <- VAOS.makeVAO $ do
     vbo <- BO.makeBuffer GL.ArrayBuffer shipVerts
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-    shipsBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
     GL.bindBuffer GL.ArrayBuffer $= Just shipsBuffer
     activateInstanced 1 2 6 0 1 -- loc, components, stride, start, divisor
     activateInstanced 2 3 6 2 1
     activateInstanced 3 1 6 5 1
-  return $ State vao prog window initialShip
+  return $ State vao prog window initialShip shipsBuffer
 
 initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
+
+-- data ShipData = ShipData {
+--       x :: GLfloat
+--     , y :: GLfloat
+--     , r :: GLfloat
+--     , g :: GLfloat
+--     , b :: GLfloat
+--     , v :: GLfloat
+--   }
 
 shipsData :: [GLfloat] -- x, y, r, g, b, rot
 shipsData =     [0, 0,          1, 0, 0,      0,
@@ -64,6 +76,23 @@ shipsData =     [0, 0,          1, 0, 0,      0,
                  150, -100,      0, 1, 0.5,   -0.5,
                  150, -300,      0, 1, 0.6,    3.14
                 ]
+
+shipsData2 :: SV.Vector GLfloat
+shipsData2 =    SV.fromList
+                [0, 0,          1, 1, 0,      0.3,
+                 150,  200,     0, 1, 0.3,    0.2,
+                 150,  100,     0, 1, 0.4,    0.4,
+                 150, -100,      0, 1, 0.5,   -0.5,
+                 150, -300,      0, 1, 0.6,    3.14
+                ]
+
+shipToData :: Ship -> [GLfloat]
+shipToData (Ship x y r _) = [realToFrac x,
+                             realToFrac y,
+                             realToFrac 1,
+                             realToFrac 0,
+                             realToFrac 0,
+                             realToFrac r]
 
 shipVerts :: [GL.GLfloat]
 shipVerts = [-40, -30
@@ -88,9 +117,29 @@ draw state =
       prog = _prog state
       window = _window state
       (Ship x y r _) = _ship state
+      shipsBuffer = _shipsBuffer state
   in VAOS.withVAO vao $ do
   (w, h) <- GLFW.getWindowSize window
   SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h)) -- !*! (transform x y r)
+
+  -- let ptrsize = toEnum $ size * 4
+  --       arrayType = ElementArrayBuffer
+  --   (array:_) <- genObjectNames 1
+  --   bindBuffer arrayType $= Just array
+  --   arr <- newListArray (0, size - 1) elems
+  --   withStorableArray arr $ \ptr -> bufferData arrayType $= (ptrsize, ptr, StaticDraw)
+
+  --let (p, offset, len) = SV.unsafeToForeignPtr shipsData2
+  --GL.bufferData GL.ArrayBuffer $= (toEnum len, p, GL.StreamDraw)
+
+  SV.unsafeWith shipsData2 $ (\p -> GL.bufferData GL.ArrayBuffer $= (30*8, p, GL.StreamDraw))
+
+  -- b <- BO.makeBuffer GL.ArrayBuffer shipsData2
+  -- GL.bindBuffer GL.ArrayBuffer $= Just b
+  -- activateInstanced 1 2 6 0 1
+  -- activateInstanced 2 3 6 2 1
+  -- activateInstanced 3 1 6 5 1
+  
   glDrawArraysInstanced gl_TRIANGLES 0 3 5
 
 tick :: State -> State
