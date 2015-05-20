@@ -116,16 +116,18 @@ tickShip ship =
   in Ship (x + 4 * cos(r)) (y - 4 * sin(r)) rgb newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
-onKey window key _ keyState _ state = state
--- onKey window key _ keyState _ state = state { _ship = newShip } where
---   ship = _ship state
---   newShip = case keyState of
---              GLFW.KeyState'Pressed -> case key of
---                                        GLFW.Key'A -> setRotationSpeed ship ( 0.03)
---                                        GLFW.Key'D -> setRotationSpeed ship (-0.03)
---                                        _ -> ship
---              GLFW.KeyState'Released -> setRotationSpeed ship 0
---              _ -> ship
+--onKey window key _ keyState _ state = state
+onKey window key _ keyState _ state = state { _ships = newShips } where
+  ships = _ships state
+  ship = head $ ships
+  newShip = case keyState of
+             GLFW.KeyState'Pressed -> case key of
+                                       GLFW.Key'A -> setRotationSpeed ship (-0.06)
+                                       GLFW.Key'D -> setRotationSpeed ship ( 0.06)
+                                       _ -> ship
+             GLFW.KeyState'Released -> setRotationSpeed ship 0
+             _ -> ship
+  newShips = newShip : (tail ships)
   
 setRotationSpeed ship newAngularRotation = ship { _ar = newAngularRotation }
 
