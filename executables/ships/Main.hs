@@ -10,6 +10,9 @@ import Graphics.Rendering.OpenGL (GLfloat)
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Matrix ((!*!))
+import Control.Monad (replicateM)
+import qualified Control.Monad.State as S
+import qualified System.Random as R
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.GLUtil.BufferObjects as BO
@@ -48,6 +51,8 @@ setup window = do
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
   instanceBuffer <- BO.makeBuffer GL.ArrayBuffer ([] :: [GLfloat]) -- will fill it later
+  g <- R.newStdGen
+  let enemies = mkEnemies g
   vao <- VAOS.makeVAO $ do
     vbo <- BO.makeBuffer GL.ArrayBuffer shipVerts
     GL.currentProgram $= Just (SHP.program prog)
@@ -61,7 +66,15 @@ setup window = do
 
 initialShip = Ship { _x = (-700), _y = (500), _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
 
-enemies = [(Ship x y (0,0.5,0.5) 0 0.01) | x <- [-700, -650 .. 700], y <- [-400, -350 .. 400]]
+mkEnemies :: R.StdGen -> [Ship]
+mkEnemies g = S.evalState (replicateM 100 mkEnemy) g
+
+mkEnemy :: S.State R.StdGen Ship
+mkEnemy = do
+  x <- getRand (-500.0, 500.0)
+  y <- getRand (-500.0, 500.0)
+  angleSpeed <- getRand (-0.1, 0.1)
+  return (Ship x y (0, 0.5, 0.5) 0 angleSpeed)
 
 shipToData :: Ship -> [GLfloat]
 shipToData (Ship x y (r,g,b) rr _) =
@@ -160,3 +173,10 @@ pulse t low high freq =
   let diff = high - low
       half = diff / 2
   in  low + half + half * realToFrac (sin (t * freq))
+
+getRand :: (Float, Float) -> S.State R.StdGen Float
+getRand range = 
+    do g <- S.get
+       let (r, g') = R.randomR range g
+       S.put g'
+       return r
