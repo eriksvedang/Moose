@@ -64,10 +64,15 @@ setup window = do
   return $ State vao prog window (initialShip : enemies) instanceBuffer
 
 initialShip :: Ship
-initialShip = Ship { _x = (-700), _y = 400, _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
+initialShip = Ship { _x = (-700)
+                   , _y = 400
+                   , _rgb = (1, 0, 0.5)
+                   , _r = 0.4
+                   , _ar = 0.001
+                   }
 
 mkEnemies :: R.StdGen -> [Ship]
-mkEnemies g = S.evalState (replicateM 600 mkEnemy) g
+mkEnemies g = S.evalState (replicateM 1000 mkEnemy) g
 
 mkEnemy :: S.State R.StdGen Ship
 mkEnemy = do
