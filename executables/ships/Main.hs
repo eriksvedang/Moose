@@ -30,11 +30,13 @@ data State = State { _vao :: VAOS.VAO
                    , _prog :: SHP.ShaderProgram
                    , _window :: GLFW.Window
                    , _ship :: Ship
-                   , _shipsBuffer :: GL.BufferObject
+                   , _ships :: [Ship]
+                   , _instanceBuffer :: GL.BufferObject
                    }
 
 data Ship = Ship { _x :: Float
                  , _y :: Float
+                 , _rgb :: (Float, Float, Float)
                  , _r :: Float
                  , _ar :: Float
                  } deriving (Show)
@@ -46,19 +48,21 @@ setup :: GLFW.Window -> IO State
 setup window = do
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
-  shipsBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
+  instanceBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
   vao <- VAOS.makeVAO $ do
     vbo <- BO.makeBuffer GL.ArrayBuffer shipVerts
     GL.currentProgram $= Just (SHP.program prog)
     GL.bindBuffer GL.ArrayBuffer $= Just vbo
     activateAttribute prog "v_position" 2
-    GL.bindBuffer GL.ArrayBuffer $= Just shipsBuffer
+    GL.bindBuffer GL.ArrayBuffer $= Just instanceBuffer
     activateInstanced 1 2 6 0 1 -- loc, components, stride, start, divisor
     activateInstanced 2 3 6 2 1
     activateInstanced 3 1 6 5 1
-  return $ State vao prog window initialShip shipsBuffer
+  return $ State vao prog window initialShip (initialShip : enemies) instanceBuffer
 
-initialShip = Ship { _x = (-700), _y = (-500), _r = 0.4, _ar = 0.001 }
+initialShip = Ship { _x = (-700), _y = (500), _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
+
+enemies = [(Ship x y (0,0.5,0.5) 0 0.01) | x <- [-700, -650 .. 700], y <- [-400, -350 .. 400]]
 
 -- data ShipData = ShipData {
 --       x :: GLfloat
@@ -87,17 +91,18 @@ shipsData2 =    SV.fromList
                 ]
 
 shipToData :: Ship -> [GLfloat]
-shipToData (Ship x y r _) = [realToFrac x,
-                             realToFrac y,
-                             realToFrac 1,
-                             realToFrac 0,
-                             realToFrac 0,
-                             realToFrac r]
+shipToData (Ship x y (r,g,b) rr _) =
+  [realToFrac x,
+   realToFrac y,
+   realToFrac r,
+   realToFrac g,
+   realToFrac b,
+   realToFrac rr]
 
 shipVerts :: [GL.GLfloat]
-shipVerts = [-40, -30
-            , 50,  00
-            ,-40,  30]
+shipVerts = [-20, -15
+            , 25,  00
+            ,-20,  15]
 
 mat4identity :: LM.M44 GLfloat
 mat4identity = LM.identity
@@ -116,45 +121,35 @@ draw state =
   let vao = _vao state
       prog = _prog state
       window = _window state
-      (Ship x y r _) = _ship state
-      shipsBuffer = _shipsBuffer state
+      (Ship x y _ r _) = _ship state
+      instanceBuffer = _instanceBuffer state
+      ships = _ships state
+      c = length ships
   in VAOS.withVAO vao $ do
   (w, h) <- GLFW.getWindowSize window
   SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h)) -- !*! (transform x y r)
+  GL.bindBuffer GL.ArrayBuffer $= Just instanceBuffer
+  SV.unsafeWith (shipsInstanceData ships) $ (\p -> GL.bufferData GL.ArrayBuffer $= (fromIntegral $ c*5*8, p, GL.StreamDraw))
+  glDrawArraysInstanced gl_TRIANGLES 0 3 (fromIntegral c)
 
-  -- let ptrsize = toEnum $ size * 4
-  --       arrayType = ElementArrayBuffer
-  --   (array:_) <- genObjectNames 1
-  --   bindBuffer arrayType $= Just array
-  --   arr <- newListArray (0, size - 1) elems
-  --   withStorableArray arr $ \ptr -> bufferData arrayType $= (ptrsize, ptr, StaticDraw)
-
-  --let (p, offset, len) = SV.unsafeToForeignPtr shipsData2
-  --GL.bufferData GL.ArrayBuffer $= (toEnum len, p, GL.StreamDraw)
-
-  SV.unsafeWith shipsData2 $ (\p -> GL.bufferData GL.ArrayBuffer $= (30*8, p, GL.StreamDraw))
-
-  -- b <- BO.makeBuffer GL.ArrayBuffer shipsData2
-  -- GL.bindBuffer GL.ArrayBuffer $= Just b
-  -- activateInstanced 1 2 6 0 1
-  -- activateInstanced 2 3 6 2 1
-  -- activateInstanced 3 1 6 5 1
-  
-  glDrawArraysInstanced gl_TRIANGLES 0 3 5
+shipsInstanceData :: [Ship] -> SV.Vector GLfloat
+shipsInstanceData ships = SV.fromList $ concatMap shipToData ships
 
 tick :: State -> State
-tick state = state { _ship = newShip } where
-  (Ship x y r ar) = _ship state
-  newR = r + ar
-  newShip = Ship (x + 5 * cos(r)) (y + 5 * sin(r)) newR ar
+tick state = state { _ships = fmap tickShip (_ships state) } where
+
+tickShip ship =
+  let (Ship x y rgb r ar) = ship
+      newR = r + ar
+  in Ship (x + 4 * cos(r)) (y - 4 * sin(r)) rgb newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
 onKey window key _ keyState _ state = state { _ship = newShip } where
   ship = _ship state
   newShip = case keyState of
              GLFW.KeyState'Pressed -> case key of
-                                       GLFW.Key'A -> setRotationSpeed ship ( 0.06)
-                                       GLFW.Key'D -> setRotationSpeed ship (-0.06)
+                                       GLFW.Key'A -> setRotationSpeed ship ( 0.03)
+                                       GLFW.Key'D -> setRotationSpeed ship (-0.03)
                                        _ -> ship
              GLFW.KeyState'Released -> setRotationSpeed ship 0
              _ -> ship
