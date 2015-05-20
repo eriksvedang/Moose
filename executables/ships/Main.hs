@@ -11,6 +11,10 @@ import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Matrix ((!*!))
 import Control.Monad (replicateM)
+import Data.List (find)
+import Graphics.Rendering.OpenGL.Raw.ARB.DrawInstanced (glDrawArraysInstanced)
+import Graphics.Rendering.OpenGL.Raw (gl_TRIANGLES, gl_LINE_STRIP, gl_TRIANGLE_STRIP)
+import Graphics.Rendering.OpenGL.Raw.ARB.InstancedArrays (glVertexAttribDivisor)
 import qualified Control.Monad.State as S
 import qualified System.Random as R
 import qualified Graphics.UI.GLFW as GLFW
@@ -22,11 +26,6 @@ import qualified Graphics.GLUtil.Linear as UL
 import qualified Linear.Matrix as LM
 import qualified Linear.Quaternion as LQ
 import qualified Linear.Projection as LP
-
-import Graphics.Rendering.OpenGL.Raw.ARB.DrawInstanced (glDrawArraysInstanced)
-import Graphics.Rendering.OpenGL.Raw (gl_TRIANGLES, gl_LINE_STRIP, gl_TRIANGLE_STRIP)
-import Graphics.Rendering.OpenGL.Raw.ARB.InstancedArrays (glVertexAttribDivisor)
-
 import qualified Data.Vector.Storable as SV
 
 data State = State { _vao :: VAOS.VAO
@@ -64,17 +63,18 @@ setup window = do
     activateInstanced 3 1 6 5 1
   return $ State vao prog window (initialShip : enemies) instanceBuffer
 
-initialShip = Ship { _x = (-700), _y = (500), _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
+initialShip :: Ship
+initialShip = Ship { _x = (-700), _y = 400, _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
 
 mkEnemies :: R.StdGen -> [Ship]
-mkEnemies g = S.evalState (replicateM 100 mkEnemy) g
+mkEnemies g = S.evalState (replicateM 600 mkEnemy) g
 
 mkEnemy :: S.State R.StdGen Ship
 mkEnemy = do
   x <- getRand (-500.0, 500.0)
   y <- getRand (-500.0, 500.0)
   angleSpeed <- getRand (-0.1, 0.1)
-  return (Ship x y (0, 0.5, 0.5) 0 angleSpeed)
+  return (Ship x y (0.1, 0.7, 0.5) 0 angleSpeed)
 
 shipToData :: Ship -> [GLfloat]
 shipToData (Ship x y (r,g,b) rr _) =
@@ -112,7 +112,7 @@ draw state =
       c = length ships
   in VAOS.withVAO vao $ do
   (w, h) <- GLFW.getWindowSize window
-  SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h)) -- !*! (transform x y r)
+  SHP.setUniform prog "u_view" $ (viewMatrix (fromIntegral w) (fromIntegral h))
   GL.bindBuffer GL.ArrayBuffer $= Just instanceBuffer
   SV.unsafeWith (shipsInstanceData ships) $ (\p -> GL.bufferData GL.ArrayBuffer $= (fromIntegral $ c*5*8, p, GL.StreamDraw))
   glDrawArraysInstanced gl_TRIANGLES 0 3 (fromIntegral c)
@@ -121,15 +121,37 @@ shipsInstanceData :: [Ship] -> SV.Vector GLfloat
 shipsInstanceData ships = SV.fromList $ concatMap shipToData ships
 
 tick :: State -> State
-tick state = state { _ships = fmap tickShip (_ships state) } where
+tick = checkCollisions . moveShips
 
-tickShip ship =
+moveShips :: State -> State
+moveShips state = state { _ships = fmap (tickShip 1.0) (_ships state) }
+
+tickShip :: Float -> Ship -> Ship
+tickShip dt ship =
   let (Ship x y rgb r ar) = ship
       newR = r + ar
-  in Ship (x + 4 * cos(r)) (y - 4 * sin(r)) rgb newR ar
+  in Ship (x + 4 * dt * cos(r)) (y - 4 * dt * sin(r)) rgb newR ar
+
+checkCollisions :: State -> State
+checkCollisions state =
+  let ships = _ships state
+      newShips = reverseIfColliding ships
+  in state { _ships = newShips }
+
+reverseIfColliding :: [Ship] -> [Ship]
+reverseIfColliding [] = []
+reverseIfColliding (ship : ships) = newShip : (reverseIfColliding ships) where
+  newShip = case find (doesCollide ship) ships of
+    Nothing -> ship
+    Just _ -> tickShip 10.0 $ ship { _r = (_r ship) + 3.1416 }
+
+doesCollide :: Ship -> Ship -> Bool
+doesCollide a b = (dx * dx) + (dy * dy) < d * d where
+  dx = (_x a) - (_x b)
+  dy = (_y a) - (_y b)
+  d  = 30
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
---onKey window key _ keyState _ state = state
 onKey window key _ keyState _ state = state { _ships = newShips } where
   ships = _ships state
   ship = head $ ships
@@ -142,6 +164,7 @@ onKey window key _ keyState _ state = state { _ships = newShips } where
              _ -> ship
   newShips = newShip : (tail ships)
   
+setRotationSpeed :: Ship -> Float -> Ship
 setRotationSpeed ship newAngularRotation = ship { _ar = newAngularRotation }
 
 vert :: ByteString
