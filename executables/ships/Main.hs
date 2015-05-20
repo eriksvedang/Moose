@@ -29,7 +29,6 @@ import qualified Data.Vector.Storable as SV
 data State = State { _vao :: VAOS.VAO
                    , _prog :: SHP.ShaderProgram
                    , _window :: GLFW.Window
-                   , _ship :: Ship
                    , _ships :: [Ship]
                    , _instanceBuffer :: GL.BufferObject
                    }
@@ -48,7 +47,7 @@ setup :: GLFW.Window -> IO State
 setup window = do
   GL.clearColor $= GL.Color4 0.9 0.95 0.95 1.0
   prog <- SHP.simpleShaderProgramBS vert frag
-  instanceBuffer <- BO.makeBuffer GL.ArrayBuffer shipsData
+  instanceBuffer <- BO.makeBuffer GL.ArrayBuffer ([] :: [GLfloat]) -- will fill it later
   vao <- VAOS.makeVAO $ do
     vbo <- BO.makeBuffer GL.ArrayBuffer shipVerts
     GL.currentProgram $= Just (SHP.program prog)
@@ -58,37 +57,11 @@ setup window = do
     activateInstanced 1 2 6 0 1 -- loc, components, stride, start, divisor
     activateInstanced 2 3 6 2 1
     activateInstanced 3 1 6 5 1
-  return $ State vao prog window initialShip (initialShip : enemies) instanceBuffer
+  return $ State vao prog window (initialShip : enemies) instanceBuffer
 
 initialShip = Ship { _x = (-700), _y = (500), _rgb = (1, 0, 0.5), _r = 0.4, _ar = 0.001 }
 
 enemies = [(Ship x y (0,0.5,0.5) 0 0.01) | x <- [-700, -650 .. 700], y <- [-400, -350 .. 400]]
-
--- data ShipData = ShipData {
---       x :: GLfloat
---     , y :: GLfloat
---     , r :: GLfloat
---     , g :: GLfloat
---     , b :: GLfloat
---     , v :: GLfloat
---   }
-
-shipsData :: [GLfloat] -- x, y, r, g, b, rot
-shipsData =     [0, 0,          1, 0, 0,      0,
-                 150,  200,     0, 1, 0.3,    0.2,
-                 150,  100,     0, 1, 0.4,    0.4,
-                 150, -100,      0, 1, 0.5,   -0.5,
-                 150, -300,      0, 1, 0.6,    3.14
-                ]
-
-shipsData2 :: SV.Vector GLfloat
-shipsData2 =    SV.fromList
-                [0, 0,          1, 1, 0,      0.3,
-                 150,  200,     0, 1, 0.3,    0.2,
-                 150,  100,     0, 1, 0.4,    0.4,
-                 150, -100,      0, 1, 0.5,   -0.5,
-                 150, -300,      0, 1, 0.6,    3.14
-                ]
 
 shipToData :: Ship -> [GLfloat]
 shipToData (Ship x y (r,g,b) rr _) =
@@ -121,7 +94,6 @@ draw state =
   let vao = _vao state
       prog = _prog state
       window = _window state
-      (Ship x y _ r _) = _ship state
       instanceBuffer = _instanceBuffer state
       ships = _ships state
       c = length ships
@@ -144,15 +116,16 @@ tickShip ship =
   in Ship (x + 4 * cos(r)) (y - 4 * sin(r)) rgb newR ar
 
 onKey :: GLFW.Window -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> State -> State
-onKey window key _ keyState _ state = state { _ship = newShip } where
-  ship = _ship state
-  newShip = case keyState of
-             GLFW.KeyState'Pressed -> case key of
-                                       GLFW.Key'A -> setRotationSpeed ship ( 0.03)
-                                       GLFW.Key'D -> setRotationSpeed ship (-0.03)
-                                       _ -> ship
-             GLFW.KeyState'Released -> setRotationSpeed ship 0
-             _ -> ship
+onKey window key _ keyState _ state = state
+-- onKey window key _ keyState _ state = state { _ship = newShip } where
+--   ship = _ship state
+--   newShip = case keyState of
+--              GLFW.KeyState'Pressed -> case key of
+--                                        GLFW.Key'A -> setRotationSpeed ship ( 0.03)
+--                                        GLFW.Key'D -> setRotationSpeed ship (-0.03)
+--                                        _ -> ship
+--              GLFW.KeyState'Released -> setRotationSpeed ship 0
+--              _ -> ship
   
 setRotationSpeed ship newAngularRotation = ship { _ar = newAngularRotation }
 
